@@ -59,12 +59,15 @@ Benchmarked on Apple M2 (single thread, `cargo bench`, optimized release build).
 
 ## Why kaiji over existing tools
 
-| Tool | What it covers | CJK variants | WASM | Cross-language |
-|------|---------------|-------------|------|----------------|
-| [mojimoji](https://github.com/studio-ousia/mojimoji) | Fullwidth↔halfwidth only | ✗ | ✗ | Python only |
-| [jaconv](https://github.com/ikegami-yukino/jaconv) | Kana conversion only | ✗ | ✗ | Python only |
-| [OpenCC](https://github.com/BYVoid/OpenCC) | Chinese simplified↔traditional | ✗ (Japanese) | △ heavy C++ | C++/Python/Node |
-| **kaiji** | **Variants + width + kana + IVS + corpus search** | **✓ 300+ mappings** | **✓ lightweight** | **Rust/Python/WASM/CLI** |
+| Tool | What it covers | JP variants | CN variants | IVS | WASM | Language |
+|------|---------------|:-----------:|:-----------:|:---:|:----:|----------|
+| [mojimoji](https://github.com/studio-ousia/mojimoji) | Fullwidth ↔ halfwidth only | ✗ | ✗ | ✗ | ✗ | Python |
+| [jaconv](https://github.com/ikegami-yukino/jaconv) | Kana + historical kana + romaji (Python only) | ✗ | ✗ | ✗ | ✗ | Python |
+| ja_cvu_normalizer | JP variant chars (dict-based) | △ partial | ✗ | ✗ | ✗ | Python |
+| normalize-japanese-addresses | JP addresses only | ✗ | ✗ | ✗ | ✓ | JS/TS |
+| [OpenCC](https://github.com/BYVoid/OpenCC) | CN simplified ↔ traditional | ✗ | ✓ | ✗ | △ heavy | C++/Python/Node |
+| ICU / CLDR | Unicode NFC/NFKC only | ✗ | ✗ | ✗ | ✗ | C++/Java |
+| **kaiji** | **Variants + width + kana + historical kana + romaji + IVS + corpus search** | **✓ 446+** | **✓** | **✓** | **✓ lightweight** | **Rust/Python/WASM/CLI** |
 
 kaiji is the first library to unify all of these capabilities in a single, compile-to-anywhere Rust core.
 
@@ -80,6 +83,9 @@ kaiji is the first library to unify all of these capabilities in a single, compi
 | **Zero-copy fast path** | Input with no variants is returned as a borrowed `&str` slice — no allocation |
 | **Fuzzy matching** | `matches("齋藤", "斎藤")` → `true` in a single call |
 | **Kana normalization** | Hiragana↔Katakana conversion — `ひらがな→ヒラガナ` or `カタカナ→かたかな` |
+| **Historical kana** | Obsolete kana to modern: ゐ→い, ゑ→え, を→お, ぢ→じ, づ→ず / ヰ→イ, ヱ→エ, ヲ→オ, ヂ→ジ, ヅ→ズ |
+| **Romaji conversion** | Kana → Modified Hepburn romaji with long-vowel collapse: `サトウ→"sato"`, `トウキョウ→"tokyo"` |
+| **Katakana halfwidth** | Fullwidth katakana → halfwidth with dakuten decomposition: ガ→ｶﾞ, パ→ﾊﾟ |
 | **Modular pipeline** | Enable only what you need via `NormalizerConfig` or the builder API |
 
 ---
@@ -379,12 +385,19 @@ cargo bench                    # requires criterion
 
 ## Why "kaiji"?
 
-**解字 (kaiji)** — "to analyze and resolve a character to its canonical form."
+**解字 (kaiji, かいじ)** — *"to analyze and resolve a character to its canonical form."*
 
-The term comes from *Shuowen Jiezi* (説文解字), the first systematic Chinese character dictionary,
-compiled by Xu Shen (許慎) around 100 CE. Each entry takes a character in one of its written forms
-and resolves it to its definitive structure and meaning — exactly what this library does for
-variant CJK characters.
+> **K**anji **A**nalysis and **I**VS **J**ormalization **I**ngine
+
+The name comes from *Shuowen Jiezi* (説文解字, "Explaining Simple and Analyzing Compound Characters"),
+the first systematic Chinese character dictionary, compiled by Xu Shen (許慎) around 100 CE.
+In that work, each entry starts from a character as it appears in one written form and **resolves it
+back to its authoritative structure and meaning** — stripping away regional or era-specific variation
+to arrive at the single canonical reading.
+
+That is exactly what this library does: it takes any written form of a CJK character — old kanji,
+traditional Chinese, IVS glyph, fullwidth variant — and resolves it to its canonical code point,
+so that `齋藤` and `斎藤` are finally the same string to a computer.
 
 ---
 

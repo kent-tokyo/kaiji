@@ -131,6 +131,91 @@ fn convert_char(c: char) -> Option<char> {
     None
 }
 
+fn full_katakana_to_half(c: char) -> Option<&'static str> {
+    match c {
+        // Small vowels
+        'ァ' => Some("ｧ"), 'ィ' => Some("ｨ"), 'ゥ' => Some("ｩ"),
+        'ェ' => Some("ｪ"), 'ォ' => Some("ｫ"),
+        // Vowels
+        'ア' => Some("ｱ"), 'イ' => Some("ｲ"), 'ウ' => Some("ｳ"),
+        'エ' => Some("ｴ"), 'オ' => Some("ｵ"),
+        // Ka-row
+        'カ' => Some("ｶ"), 'ガ' => Some("ｶﾞ"),
+        'キ' => Some("ｷ"), 'ギ' => Some("ｷﾞ"),
+        'ク' => Some("ｸ"), 'グ' => Some("ｸﾞ"),
+        'ケ' => Some("ｹ"), 'ゲ' => Some("ｹﾞ"),
+        'コ' => Some("ｺ"), 'ゴ' => Some("ｺﾞ"),
+        // Sa-row
+        'サ' => Some("ｻ"), 'ザ' => Some("ｻﾞ"),
+        'シ' => Some("ｼ"), 'ジ' => Some("ｼﾞ"),
+        'ス' => Some("ｽ"), 'ズ' => Some("ｽﾞ"),
+        'セ' => Some("ｾ"), 'ゼ' => Some("ｾﾞ"),
+        'ソ' => Some("ｿ"), 'ゾ' => Some("ｿﾞ"),
+        // Ta-row
+        'タ' => Some("ﾀ"), 'ダ' => Some("ﾀﾞ"),
+        'チ' => Some("ﾁ"), 'ヂ' => Some("ﾁﾞ"),
+        'ッ' => Some("ｯ"),
+        'ツ' => Some("ﾂ"), 'ヅ' => Some("ﾂﾞ"),
+        'テ' => Some("ﾃ"), 'デ' => Some("ﾃﾞ"),
+        'ト' => Some("ﾄ"), 'ド' => Some("ﾄﾞ"),
+        // Na-row
+        'ナ' => Some("ﾅ"), 'ニ' => Some("ﾆ"), 'ヌ' => Some("ﾇ"),
+        'ネ' => Some("ﾈ"), 'ノ' => Some("ﾉ"),
+        // Ha-row (voiced = ba, semi-voiced = pa)
+        'ハ' => Some("ﾊ"), 'バ' => Some("ﾊﾞ"), 'パ' => Some("ﾊﾟ"),
+        'ヒ' => Some("ﾋ"), 'ビ' => Some("ﾋﾞ"), 'ピ' => Some("ﾋﾟ"),
+        'フ' => Some("ﾌ"), 'ブ' => Some("ﾌﾞ"), 'プ' => Some("ﾌﾟ"),
+        'ヘ' => Some("ﾍ"), 'ベ' => Some("ﾍﾞ"), 'ペ' => Some("ﾍﾟ"),
+        'ホ' => Some("ﾎ"), 'ボ' => Some("ﾎﾞ"), 'ポ' => Some("ﾎﾟ"),
+        // Ma-row
+        'マ' => Some("ﾏ"), 'ミ' => Some("ﾐ"), 'ム' => Some("ﾑ"),
+        'メ' => Some("ﾒ"), 'モ' => Some("ﾓ"),
+        // Ya-row (small + large)
+        'ャ' => Some("ｬ"), 'ヤ' => Some("ﾔ"),
+        'ュ' => Some("ｭ"), 'ユ' => Some("ﾕ"),
+        'ョ' => Some("ｮ"), 'ヨ' => Some("ﾖ"),
+        // Ra-row
+        'ラ' => Some("ﾗ"), 'リ' => Some("ﾘ"), 'ル' => Some("ﾙ"),
+        'レ' => Some("ﾚ"), 'ロ' => Some("ﾛ"),
+        // Wa-row (ヮ/ヰ/ヱ have no halfwidth form)
+        'ワ' => Some("ﾜ"), 'ヲ' => Some("ｦ"), 'ン' => Some("ﾝ"),
+        // Special
+        'ヴ' => Some("ｳﾞ"),
+        '・' => Some("･"),  // U+30FB → U+FF65
+        'ー' => Some("ｰ"),  // U+30FC → U+FF70
+        // ヮ(U+30EE), ヰ(U+30F0), ヱ(U+30F1), ヵ(U+30F5), ヶ(U+30F6): no halfwidth form
+        _ => None,
+    }
+}
+
+/// Convert fullwidth katakana → halfwidth katakana.
+/// Voiced syllables expand to two codepoints: ガ → ｶﾞ (U+FF76 U+FF9E).
+/// Returns `Cow::Borrowed` when no fullwidth katakana is present (zero allocation).
+pub(crate) fn apply_katakana_halfwidth_fold(input: &str) -> Cow<'_, str> {
+    let mut buf = String::new();
+    let mut changed = false;
+
+    for (i, c) in input.char_indices() {
+        match full_katakana_to_half(c) {
+            Some(half) => {
+                if !changed {
+                    buf.reserve(input.len());
+                    buf.push_str(&input[..i]);
+                    changed = true;
+                }
+                buf.push_str(half);
+            }
+            None => {
+                if changed {
+                    buf.push(c);
+                }
+            }
+        }
+    }
+
+    if changed { Cow::Owned(buf) } else { Cow::Borrowed(input) }
+}
+
 /// Apply Unicode NFKC normalization.
 /// Only compiled when the `nfkc` Cargo feature is enabled.
 #[cfg(feature = "nfkc")]
@@ -217,6 +302,74 @@ mod tests {
         // U+FF5E FULLWIDTH TILDE → U+007E TILDE
         let result = convert_width("～");
         assert_eq!(result, "~");
+    }
+
+    #[test]
+    fn full_katakana_to_halfwidth_basic() {
+        let result = apply_katakana_halfwidth_fold("アイウエオ");
+        assert_eq!(result, "ｱｲｳｴｵ");
+        assert!(matches!(result, Cow::Owned(_)));
+    }
+
+    #[test]
+    fn full_katakana_to_halfwidth_voiced() {
+        let result = apply_katakana_halfwidth_fold("ガギグ");
+        assert_eq!(result, "ｶﾞｷﾞｸﾞ");
+        assert_eq!(result.chars().count(), 6);
+    }
+
+    #[test]
+    fn full_katakana_to_halfwidth_semi_voiced() {
+        let result = apply_katakana_halfwidth_fold("パピプ");
+        assert_eq!(result, "ﾊﾟﾋﾟﾌﾟ");
+        assert_eq!(result.chars().count(), 6);
+    }
+
+    #[test]
+    fn full_katakana_to_halfwidth_vu() {
+        assert_eq!(apply_katakana_halfwidth_fold("ヴ"), "ｳﾞ");
+    }
+
+    #[test]
+    fn full_katakana_no_halfwidth_form_passes_through() {
+        let input = "ヮヰヱヵヶ";
+        let result = apply_katakana_halfwidth_fold(input);
+        assert_eq!(result, input);
+        assert!(matches!(result, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn full_katakana_small_kana() {
+        assert_eq!(apply_katakana_halfwidth_fold("ァィゥェォャュョッ"), "ｧｨｩｪｫｬｭｮｯ");
+    }
+
+    #[test]
+    fn full_katakana_special_chars() {
+        assert_eq!(apply_katakana_halfwidth_fold("ヲンー・"), "ｦﾝｰ･");
+    }
+
+    #[test]
+    fn full_katakana_hiragana_passthrough() {
+        let input = "あいうえお";
+        let result = apply_katakana_halfwidth_fold(input);
+        assert!(matches!(result, Cow::Borrowed(_)));
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn full_katakana_non_kana_passthrough() {
+        let input = "ABC斉藤123";
+        let result = apply_katakana_halfwidth_fold(input);
+        assert!(matches!(result, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn full_katakana_round_trip_voiced() {
+        let half_in = "ｶﾞｷﾞｸﾞ";
+        let full = convert_width(half_in);
+        assert_eq!(full, "ガギグ");
+        let back = apply_katakana_halfwidth_fold(&full);
+        assert_eq!(back, half_in);
     }
 
     #[cfg(feature = "nfkc")]

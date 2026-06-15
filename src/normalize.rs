@@ -60,6 +60,32 @@ pub fn normalize_default(input: &str) -> Result<Cow<'_, str>> {
     normalize(input, &NormalizerConfig::default())
 }
 
+/// Lazily normalize strings from an iterator.
+///
+/// Each item is normalized independently. `Cow::Borrowed` is returned for
+/// strings that need no substitution, so clean-path inputs produce zero heap
+/// allocation per item.
+///
+/// # Example
+/// ```
+/// use kaiji::{normalize_iter, NormalizerConfig};
+///
+/// let cfg = NormalizerConfig::default();
+/// let names = ["齋藤", "渡辺", "佐藤"];
+/// let normalized: Vec<_> = normalize_iter(names.iter().copied(), &cfg)
+///     .collect::<Result<_, _>>().unwrap();
+/// assert_eq!(normalized[0], "斉藤");
+/// ```
+pub fn normalize_iter<'a, I>(
+    iter: I,
+    config: &'a NormalizerConfig,
+) -> impl Iterator<Item = Result<Cow<'a, str>>> + 'a
+where
+    I: Iterator<Item = &'a str> + 'a,
+{
+    iter.map(move |s| normalize(s, config))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

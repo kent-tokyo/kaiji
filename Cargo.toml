@@ -2,6 +2,7 @@
 name = "kaiji"
 version = "0.1.0"
 edition = "2024"
+authors = ["kent-tokyo <kent-tokyo@users.noreply.github.com>"]
 description = "High-performance CJK fuzzy search and text normalization engine"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/kent-tokyo/kaiji"

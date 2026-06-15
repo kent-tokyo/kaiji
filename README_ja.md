@@ -59,12 +59,15 @@ Apple M2（シングルスレッド、`cargo bench`、release ビルド）での
 
 ## 既存ツールとの比較
 
-| ツール | カバー範囲 | CJK異体字 | WASM | クロス言語 |
-|--------|----------|---------|------|----------|
-| [mojimoji](https://github.com/studio-ousia/mojimoji) | 全角↔半角のみ | ✗ | ✗ | Python のみ |
-| [jaconv](https://github.com/ikegami-yukino/jaconv) | かな変換のみ | ✗ | ✗ | Python のみ |
-| [OpenCC](https://github.com/BYVoid/OpenCC) | 中国語簡体↔繁体のみ | ✗（日本語非対応） | △ 重い C++ | C++/Python/Node |
-| **kaiji** | **異体字＋文字幅＋IVS＋コーパス検索** | **✓ 300字族以上** | **✓ 軽量** | **Rust/Python/WASM/CLI** |
+| ツール | カバー範囲 | 日本語異体字 | 中国語異体字 | IVS | WASM | 言語 |
+|--------|----------|:----------:|:----------:|:---:|:----:|------|
+| [mojimoji](https://github.com/studio-ousia/mojimoji) | 全角↔半角のみ | ✗ | ✗ | ✗ | ✗ | Python |
+| [jaconv](https://github.com/ikegami-yukino/jaconv) | かな変換＋歴史的仮名＋ローマ字（Pythonのみ） | ✗ | ✗ | ✗ | ✗ | Python |
+| ja_cvu_normalizer | 日本語異体字（辞書ベース） | △ 部分的 | ✗ | ✗ | ✗ | Python |
+| normalize-japanese-addresses | 住所正規化のみ | ✗ | ✗ | ✗ | ✓ | JS/TS |
+| [OpenCC](https://github.com/BYVoid/OpenCC) | 中国語簡体↔繁体 | ✗ | ✓ | ✗ | △ 重い | C++/Python/Node |
+| ICU / CLDR | Unicode NFC/NFKC のみ | ✗ | ✗ | ✗ | ✗ | C++/Java |
+| **kaiji** | **異体字＋文字幅＋かな＋歴史的仮名＋ローマ字＋IVS＋コーパス検索** | **✓ 446字族以上** | **✓** | **✓** | **✓ 軽量** | **Rust/Python/WASM/CLI** |
 
 kaiji は、これらすべての機能を単一の「どこでもコンパイル可能な」Rust コアに統合した初のライブラリです。
 
@@ -358,11 +361,17 @@ cargo bench                    # criterion が必要
 
 ## 名前の由来
 
-**解字（かいじ）** — 「文字を解析し、その本来の形に還元する」こと。
+**解字（かいじ）** — 「文字をひもとき、その本来の姿に還元する」
 
-後漢の許慎が著した『説文解字』（約 100 年）に由来する概念です。
-同書の各項目は、ある表記形から出発し、その文字の正統な構造・意味を導き出します。
-kaiji ライブラリがやっていることと寸分違わず同じです。
+> **K**anji **A**nalysis and **I**VS **J**ormalization **I**ngine
+
+名前の由来は、後漢の許慎（きょしん）が西暦約 100 年に著した**『説文解字（せつもんかいじ）』**です。
+中国初の体系的な漢字字典であるこの書は、各文字をある表記形から出発し、
+その文字が持つ**本来の字形と意味を一つ一つ解き明かす**という構成になっています。
+時代や地域によって生まれた字体の揺れを取り除き、
+あるべき一つの正準形へと還元する — それがこのライブラリのやっていることそのものです。
+
+`齋藤` も `斎藤` も、コンピュータにとって同じ文字列になる世界を目指して。
 
 ---
 

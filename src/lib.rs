@@ -30,7 +30,11 @@
 
 #[cfg(feature = "address")]
 pub mod address;
+#[cfg(feature = "chinese")]
+pub mod word_convert;
+pub(crate) mod romaji;
 pub mod config;
+pub mod dedup;
 pub mod error;
 #[cfg(feature = "index")]
 pub mod index;
@@ -42,11 +46,12 @@ pub mod variants;
 pub(crate) mod width;
 pub(crate) mod kana;
 
-pub use config::NormalizerConfig;
+pub use config::{ChineseConvertMode, NormalizerConfig};
+pub use dedup::group_variants;
 pub use error::{CjkFuzzyError, Result};
 #[cfg(feature = "index")]
 pub use index::{KaijiIndex, SearchHit};
 pub use matcher::{matches, matches_default};
-pub use normalize::{normalize, normalize_default};
+pub use normalize::{normalize, normalize_default, normalize_iter};
 pub use normalizer::{Normalizer, NormalizerBuilder};
 pub use similarity::similarity_score;
