@@ -1,0 +1,32 @@
+# ── Rust build artifacts ────────────────────────────────────────────────────
+**/target/
+
+# ── wasm-pack output ─────────────────────────────────────────────────────────
+bindings/wasm/pkg/
+
+# ── Python build output ──────────────────────────────────────────────────────
+bindings/python/dist/
+bindings/python/*.egg-info/
+__pycache__/
+*.pyc
+
+# ── Fuzz corpus and crash artifacts (large; manage separately if needed) ─────
+fuzz/corpus/
+fuzz/artifacts/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editor ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*~
+
+# ── Local development files (not for public repo) ────────────────────────────
+CLAUDE.md
+AGENTS.md
+.claude/
+memo.txt
+tasks/

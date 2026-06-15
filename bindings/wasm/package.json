@@ -1,0 +1,20 @@
+{
+  "keywords": [
+    "cjk",
+    "japanese",
+    "chinese",
+    "normalization",
+    "kanji",
+    "unicode",
+    "wasm",
+    "fuzzy"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kent-tokyo/kaiji"
+  },
+  "homepage": "https://github.com/kent-tokyo/kaiji#readme",
+  "bugs": {
+    "url": "https://github.com/kent-tokyo/kaiji/issues"
+  }
+}

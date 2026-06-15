@@ -1,0 +1,13 @@
+[package]
+name = "kaiji-c"
+version = "0.1.0"
+edition = "2024"
+description = "C ABI bindings for the kaiji CJK normalization engine"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+kaiji = { path = "../..", features = ["japanese"] }

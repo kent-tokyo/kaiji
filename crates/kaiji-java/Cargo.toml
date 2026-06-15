@@ -1,0 +1,13 @@
+[package]
+name = "kaiji-java"
+version = "0.1.0"
+edition = "2024"
+description = "JNI bindings for kaiji CJK normalization"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+kaiji = { path = "../..", features = ["japanese"] }
+jni = "0.21"

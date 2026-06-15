@@ -1,0 +1,21 @@
+[package]
+name = "kaiji-wasm"
+version = "0.1.0"
+edition = "2024"
+description = "WebAssembly bindings for the kaiji CJK normalization engine"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/kent-tokyo/kaiji"
+homepage = "https://github.com/kent-tokyo/kaiji#readme"
+keywords = ["cjk", "japanese", "normalization", "kanji", "wasm"]
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+kaiji = { path = "../..", features = ["japanese", "index"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

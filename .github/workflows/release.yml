@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # for creating GitHub releases with binary assets
+  id-token: write  # for PyPI Trusted Publishing
+
+jobs:
+  # ─── CLI バイナリ → GitHub Releases ─────────────────────────────────────────
+  build-cli:
+    name: Build CLI binary (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact: kaiji-linux-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: kaiji-macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: kaiji-macos-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: kaiji-windows-x86_64.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install musl-tools (Linux)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get install -y musl-tools
+      - name: Build CLI
+        run: cargo build --release --manifest-path crates/kaiji-cli/Cargo.toml --target ${{ matrix.target }}
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: cp target/${{ matrix.target }}/release/kaiji ${{ matrix.artifact }}
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: cp target/${{ matrix.target }}/release/kaiji.exe ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  publish-cli:
+    name: Upload CLI binaries to GitHub Release
+    needs: build-cli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cli-*
+          merge-multiple: true
+          path: binaries
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binaries/*
+
+  # ─── Rust crate → crates.io ─────────────────────────────────────────────────
+  publish-crate:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        working-directory: .
+
+  publish-cli-crate:
+    name: Publish kaiji-cli to crates.io
+    needs: publish-crate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        working-directory: crates/kaiji-cli
+
+  # ─── Python wheels → PyPI ───────────────────────────────────────────────────
+  build-wheels:
+    name: Build Python wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: bindings/python
+          args: --release --out dist
+          manylinux: auto
+          target: ${{ matrix.os == 'macos-latest' && 'universal2' || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: bindings/python/dist
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+  # ─── WASM → npm ─────────────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish to npm (kaiji-wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build WASM
+        run: wasm-pack build bindings/wasm --target bundler --release
+      - name: Publish to npm
+        run: npm publish bindings/wasm/pkg --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

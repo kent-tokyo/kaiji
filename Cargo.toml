@@ -1,0 +1,41 @@
+[package]
+name = "kaiji"
+version = "0.1.0"
+edition = "2024"
+description = "High-performance CJK fuzzy search and text normalization engine"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/kent-tokyo/kaiji"
+documentation = "https://docs.rs/kaiji"
+repository = "https://github.com/kent-tokyo/kaiji"
+keywords = ["cjk", "japanese", "normalization", "kanji", "unicode"]
+categories = ["text-processing", "internationalization"]
+rust-version = "1.85"
+
+[features]
+default = ["japanese"]
+japanese = []
+chinese = []
+nfkc = ["dep:unicode-normalization"]
+address = []
+full = ["japanese", "chinese", "nfkc", "address"]
+index = ["dep:fst"]
+
+[dependencies]
+unicode-normalization = { version = "0.1", optional = true }
+fst = { version = "0.4", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "normalize_bench"
+harness = false
+
+[[bench]]
+name = "bulk_bench"
+harness = false
+
+[[bench]]
+name = "index_bench"
+harness = false
+required-features = ["index"]

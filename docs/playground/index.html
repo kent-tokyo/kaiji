@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kaiji Playground — CJK Fuzzy Match &amp; Normalization</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span {
+      color: #e63946;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    header a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    header a:hover { text-decoration: underline; }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 1.25rem;
+    }
+
+    .card h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .input-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      font-size: 1.25rem;
+      border: 1.5px solid #ddd;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    .input-group input:focus {
+      border-color: #0066cc;
+    }
+
+    .samples {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .samples button {
+      background: #f0f4ff;
+      border: 1.5px solid #c8d8f8;
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: #0055bb;
+      transition: background 0.12s, border-color 0.12s;
+      font-family: inherit;
+    }
+
+    .samples button:hover {
+      background: #dce8ff;
+      border-color: #99bbee;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .results-table tr + tr td {
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .results-table td {
+      padding: 0.65rem 0;
+      vertical-align: middle;
+    }
+
+    .results-table .label {
+      font-size: 0.85rem;
+      color: #555;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      width: 55%;
+    }
+
+    .results-table .value {
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 99px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .badge-true  { background: #d4f7e0; color: #1a7a3e; }
+    .badge-false { background: #fde8e8; color: #a01a1a; }
+
+    .status {
+      margin-top: 1rem;
+      font-size: 0.82rem;
+      color: #999;
+      text-align: center;
+    }
+
+    footer {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #aaa;
+      text-align: center;
+    }
+
+    footer a { color: #0066cc; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>kaiji <span>Playground</span></h1>
+  <p>
+    CJK fuzzy match &amp; normalization — try it in your browser.<br />
+    <a href="https://github.com/kent-tokyo/kaiji" target="_blank" rel="noopener">
+      View on GitHub &rarr;
+    </a>
+  </p>
+</header>
+
+<div class="card">
+  <h2>Inputs</h2>
+  <div class="input-row">
+    <div class="input-group">
+      <label for="inputA">Input A</label>
+      <input id="inputA" type="text" value="齋藤一郎" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="input-group">
+      <label for="inputB">Input B</label>
+      <input id="inputB" type="text" value="斎藤一郎" autocomplete="off" spellcheck="false" />
+    </div>
+  </div>
+  <div class="samples">
+    <button data-a="齋藤一郎" data-b="斎藤一郎">齋藤一郎 / 斎藤一郎</button>
+    <button data-a="渡邊花子" data-b="渡辺花子">渡邊花子 / 渡辺花子</button>
+    <button data-a="𠮷野家"  data-b="吉野家">𠮷野家 / 吉野家</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Results</h2>
+  <table class="results-table">
+    <tr>
+      <td class="label">normalize(A)</td>
+      <td class="value" id="out-normalize">&#8212;</td>
+    </tr>
+    <tr>
+      <td class="label">matches(A, B)</td>
+      <td class="value" id="out-matches">&#8212;</td>
+    </tr>
+    <tr>
+      <td class="label">similarity_score(A, B)</td>
+      <td class="value" id="out-score">&#8212;</td>
+    </tr>
+  </table>
+  <p class="status" id="status">Loading WASM&hellip;</p>
+</div>
+
+<div class="card">
+  <h2>Corpus Search</h2>
+  <div style="margin-bottom:1rem;">
+    <label style="display:block;font-size:0.8rem;font-weight:600;color:#555;margin-bottom:0.3rem;">
+      Corpus (one entry per line)
+    </label>
+    <textarea id="corpus" rows="6" style="width:100%;padding:0.6rem 0.75rem;font-size:1rem;border:1.5px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;" spellcheck="false">斎藤一郎
+渡辺花子
+佐藤次郎
+鈴木三郎
+田中四郎
+髙橋太郎</textarea>
+  </div>
+  <button id="buildBtn" style="background:#0066cc;color:#fff;border:none;border-radius:6px;padding:0.5rem 1.25rem;font-size:0.95rem;cursor:pointer;font-family:inherit;margin-bottom:1rem;">
+    Build Index
+  </button>
+  <span id="indexStatus" style="font-size:0.82rem;color:#999;margin-left:0.75rem;"></span>
+
+  <div class="input-row" style="margin-bottom:0.75rem;">
+    <div class="input-group">
+      <label for="corpusQuery">Query</label>
+      <input id="corpusQuery" type="text" value="齋藤一郎" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="input-group" style="max-width:180px;">
+      <label for="thresholdSlider">Threshold: <span id="thresholdVal">0.70</span></label>
+      <input id="thresholdSlider" type="range" min="0" max="1" step="0.01" value="0.70" style="width:100%;margin-top:0.5rem;" />
+    </div>
+  </div>
+  <button id="searchBtn" style="background:#0066cc;color:#fff;border:none;border-radius:6px;padding:0.5rem 1.25rem;font-size:0.95rem;cursor:pointer;font-family:inherit;margin-bottom:1rem;" disabled>
+    Search
+  </button>
+
+  <table class="results-table" id="searchResults" style="display:none;">
+    <thead>
+      <tr>
+        <td class="label" style="font-weight:700;color:#333;">Original</td>
+        <td class="value" style="font-weight:700;color:#333;text-align:right;">Score</td>
+      </tr>
+    </thead>
+    <tbody id="searchResultsBody"></tbody>
+  </table>
+  <p id="noResults" style="color:#999;font-size:0.85rem;display:none;">No results above threshold.</p>
+</div>
+
+<footer>
+  Powered by <a href="https://github.com/kent-tokyo/kaiji">kaiji</a> compiled to WebAssembly.
+  MIT OR Apache-2.0.
+</footer>
+
+<script type="module">
+  import init, { normalize, matches, similarity_score, KaijiIndex } from './pkg/kaiji_wasm.js';
+
+  const inputA   = document.getElementById('inputA');
+  const inputB   = document.getElementById('inputB');
+  const outNorm  = document.getElementById('out-normalize');
+  const outMatch = document.getElementById('out-matches');
+  const outScore = document.getElementById('out-score');
+  const status   = document.getElementById('status');
+
+  function setMatchBadge(cell, matched) {
+    // Remove any existing badge child
+    while (cell.firstChild) {
+      cell.removeChild(cell.firstChild);
+    }
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + (matched ? 'badge-true' : 'badge-false');
+    badge.textContent = matched ? 'true' : 'false';
+    cell.appendChild(badge);
+  }
+
+  function update() {
+    const a = inputA.value;
+    const b = inputB.value;
+
+    try {
+      outNorm.textContent = normalize(a);
+    } catch (e) {
+      outNorm.textContent = '(error)';
+    }
+
+    try {
+      setMatchBadge(outMatch, matches(a, b));
+    } catch (e) {
+      outMatch.textContent = '(error)';
+    }
+
+    try {
+      outScore.textContent = similarity_score(a, b).toFixed(2);
+    } catch (e) {
+      outScore.textContent = '(error)';
+    }
+  }
+
+  inputA.addEventListener('input', update);
+  inputB.addEventListener('input', update);
+
+  document.querySelectorAll('.samples button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      inputA.value = btn.dataset.a;
+      inputB.value = btn.dataset.b;
+      update();
+    });
+  });
+
+  let corpusIndex = null;
+
+  const buildBtn    = document.getElementById('buildBtn');
+  const searchBtn   = document.getElementById('searchBtn');
+  const indexStatus = document.getElementById('indexStatus');
+  const thresholdSlider = document.getElementById('thresholdSlider');
+  const thresholdVal    = document.getElementById('thresholdVal');
+  const searchResults   = document.getElementById('searchResults');
+  const searchResultsBody = document.getElementById('searchResultsBody');
+  const noResults   = document.getElementById('noResults');
+
+  thresholdSlider.addEventListener('input', () => {
+    thresholdVal.textContent = parseFloat(thresholdSlider.value).toFixed(2);
+  });
+
+  buildBtn.addEventListener('click', () => {
+    const lines = document.getElementById('corpus').value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    if (lines.length === 0) {
+      indexStatus.textContent = 'Corpus is empty.';
+      return;
+    }
+    try {
+      corpusIndex = new KaijiIndex(lines);
+      indexStatus.textContent = `Index built (${corpusIndex.len()} unique forms from ${lines.length} entries).`;
+      searchBtn.disabled = false;
+      searchResults.style.display = 'none';
+      noResults.style.display = 'none';
+    } catch (e) {
+      indexStatus.textContent = 'Error: ' + e.message;
+    }
+  });
+
+  searchBtn.addEventListener('click', () => {
+    if (!corpusIndex) return;
+    const query = document.getElementById('corpusQuery').value;
+    const threshold = parseFloat(thresholdSlider.value);
+    try {
+      const hits = corpusIndex.search(query, threshold);
+      searchResultsBody.innerHTML = '';
+      if (hits.length === 0) {
+        searchResults.style.display = 'none';
+        noResults.style.display = 'block';
+      } else {
+        noResults.style.display = 'none';
+        searchResults.style.display = 'table';
+        for (let i = 0; i < hits.length; i++) {
+          const hit = hits[i];
+          const tr = document.createElement('tr');
+          const tdOrig = document.createElement('td');
+          tdOrig.className = 'label';
+          tdOrig.textContent = hit.original;
+          const tdScore = document.createElement('td');
+          tdScore.className = 'value';
+          tdScore.textContent = hit.score.toFixed(2);
+          tr.appendChild(tdOrig);
+          tr.appendChild(tdScore);
+          searchResultsBody.appendChild(tr);
+        }
+      }
+    } catch (e) {
+      indexStatus.textContent = 'Search error: ' + e.message;
+    }
+  });
+
+  try {
+    await init();
+    status.textContent = 'WASM loaded successfully.';
+    update();
+  } catch (e) {
+    status.textContent = 'Failed to load WASM: ' + e.message;
+  }
+</script>
+
+</body>
+</html>
